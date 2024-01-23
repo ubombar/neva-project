@@ -2,6 +2,8 @@ import requests
 import datetime
 import requests
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
+import concurrent
 
 def download_file(url, local_filename):
     """
@@ -19,6 +21,7 @@ def download_file(url, local_filename):
 
 if __name__ == "__main__":
     sample_weekday = 0 # 0 means monday 1 means tuesdat 2 menas wednesday etc.
+    num_downloads_in_parallel = 20
 
     # copied from https://mawi.wide.ad.jp/mawi/samplepoint-F/2022/
     dates_str = '''2022/01: 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31
@@ -67,11 +70,27 @@ if __name__ == "__main__":
         paths.append(the_path)
 
     print("Preprocessing complete...")
+    print(f"There will be {len(links)} files in total.")
 
-    for url, path in zip(links, paths):
-        print(f"Downloading {path} from {url}")
-        download_file(url, path)
-        print(f"Downloaded {path}")
+    # Old sequential way
+    # for url, path in zip(links, paths):
+    #     print(f"Downloading {path} from {url}")
+    #     download_file(url, path)
+    #     print(f"Downloaded {path}")
+
+    # print("All files have been downloaded.")
+
+    with ThreadPoolExecutor(max_workers=num_downloads_in_parallel) as executor:
+        # Start the download operations and mark each future with its URL
+        future_to_url = {executor.submit(download_file, url, path): url for url, path in zip(links, paths)}
+        for future in concurrent.futures.as_completed(future_to_url):
+            url = future_to_url[future]
+            try:
+                data = future.result()
+            except Exception as exc:
+                print(f'{url} generated an exception: {exc}')
+            else:
+                print(data)
 
     print("All files have been downloaded.")
 

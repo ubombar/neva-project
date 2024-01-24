@@ -1,1 +1,4 @@
 downloads/*.pcap.gz
+extracted/.DS_Store
+extracted/*.pcap
+.DS_Store

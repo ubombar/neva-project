@@ -23,6 +23,7 @@ class PacketInfo:
     dst_port: int
     mallicious: bool # this requires a more work
     date: date
+    seq_ip_version: str
 
 # Apply the nest_asyncio patch
 
@@ -52,22 +53,26 @@ def get_n_packages(file_name, number_of_packages):
 
     # Iterate over packets and display their information
     for i, packet in enumerate(cap):
-        if i >= number_of_packages: break
-        packet: Packet = packet
-        if ('TCP' not in packet) or ('IP' not in packet): continue
-        progress_bar.update(1)
-        # print(f"Seq: {packet.tcp.seq}")
-        a = PacketInfo(
-            seq_number=int(packet.tcp.seq),
-            masked_dst=packet.ip.dst,
-            masked_src=packet.ip.src,
-            cap_index=i,
-            date=current_date,
-            dst_port=int(packet.tcp.dstport),
-            src_port=int(packet.tcp.srcport),
-            mallicious=check_if_mallicious(packet.tcp.dstport, packet.tcp.srcport, packet.tcp.seq)
-        )
-        return_array.append(a)
+        try:
+            if i >= number_of_packages: break
+            packet: Packet = packet
+            if ('TCP' not in packet) or ('IP' not in packet): continue
+            progress_bar.update(1)
+            # print(f"Seq: {packet.tcp.seq}")
+            a = PacketInfo(
+                seq_number=int(packet.tcp.seq),
+                masked_dst=packet.ip.dst,
+                masked_src=packet.ip.src,
+                cap_index=i,
+                date=current_date,
+                dst_port=int(packet.tcp.dstport),
+                src_port=int(packet.tcp.srcport),
+                mallicious=check_if_mallicious(packet.tcp.dstport, packet.tcp.srcport, packet.tcp.seq),
+                seq_ip_version=convert_to_ip_str(int(packet.tcp.seq))
+            )
+            return_array.append(a)
+        except Exception:
+            continue
 
     cap.close()
     return return_array
@@ -83,6 +88,7 @@ def worker_function(filename, number_of_packages, queue):
 
 
 if __name__ == "__main__":
+    # number_of_packages = 1_000_000
     number_of_packages = 1_000_000
     filenames = ["./extracted/" + x for x in os.listdir("./extracted/") if not x.startswith(".")]
 
@@ -97,7 +103,7 @@ if __name__ == "__main__":
     total_files = []
 
     for _ in filenames:
-        total_files += queue.get()
+        total_files += queue.get() # optimmize this
 
     df = pd.DataFrame(total_files)
 
